@@ -118,13 +118,15 @@
             (multiple-value-bind (handled msg)
                 (apply-slash-command sess line)
               (cond
-                ((eq handled :quit) (return))
-                (handled (format t "~&desk> ~a~%" msg))
+                ((eq handled :quit)
+                 (return))
+                (handled
+                 (format t "~&desk> ~a~%" msg))
                 ((plusp (length (string-trim '(#\Space #\Tab) line)))
                  (handler-case
                      (let ((run (with-auto-load-env (chat-turn sess line))))
                        (format t "~&desk> ~a~%"
                                (or (ai-agent-protocol:agent-run-text run) "")))
                    (error (e)
-                     (format t "~&desk> error: ~a~%" e))))))))
+                     (format t "~&desk> error: ~a~%" e)))))))))
       sess)))
