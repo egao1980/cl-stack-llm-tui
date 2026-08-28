@@ -13,7 +13,7 @@
      (mapcar (lambda (p)
                (mcp-protocol:json-object
                 "name" (stack-pathlib:name p)
-                "path" (stack-pathlib:as-posix (stack-pathlib:relative-to p (workspace-root)))
+                "path" (%relposix p)
                 "dir" (and (stack-pathlib:directory-p p) t)))
              (stack-pathlib:iterdir dir)))))
 
@@ -29,7 +29,7 @@
                                 size +max-read-bytes+)))
       (stack-json:encode
        (mcp-protocol:json-object
-        "path" (stack-pathlib:as-posix (stack-pathlib:relative-to path (workspace-root)))
+        "path" (%relposix path)
         "text" (stack-pathlib:read-text path))))))
 
 (defun tool-write-note (args)
@@ -53,7 +53,7 @@
                                         text)))
     (stack-json:encode
      (mcp-protocol:json-object
-      "path" (stack-pathlib:as-posix (stack-pathlib:relative-to path (workspace-root)))
+      "path" (%relposix path)
       "bytes" (length text)))))
 
 (defun tool-search-files (args)
@@ -73,9 +73,7 @@
        (push root hits)))
     (let ((hits (nreverse hits)))
       (stack-json:encode
-       (mapcar (lambda (p)
-                 (stack-pathlib:as-posix (stack-pathlib:relative-to p (workspace-root))))
-               (subseq hits 0 (min 50 (length hits))))))))
+       (mapcar #'%relposix (subseq hits 0 (min 50 (length hits))))))))
 
 (defun %mcp-handler (fn)
   (lambda (args)
