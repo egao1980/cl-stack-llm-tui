@@ -25,6 +25,8 @@ Clone this repo only. Deps from [`ghcr.io/egao1980/cl-systems`](https://github.c
 | [oras](https://oras.land/) | client + package pull |
 | [LM Studio](https://lmstudio.ai/) | optional; local OpenAI server on `:1234` |
 
+If `ros -l scripts/install.lisp` dies with `X509_V_ERR_UNABLE_TO_GET_ISSUER_CERT_LOCALLY`, point `SSL_CERT_FILE` at your OpenSSL CA bundle (Homebrew: `/opt/homebrew/etc/openssl@3/cert.pem`).
+
 ## Install
 
 ```bash

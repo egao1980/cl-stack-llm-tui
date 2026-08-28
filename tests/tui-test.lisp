@@ -47,6 +47,16 @@
                  (tool-search-files (mcp-protocol:json-object "pattern" "*.md")))))
       (ok (find "notes.md" hits :test #'string=)))))
 
+(defun %mcp-text (result)
+  (cond
+    ((stringp result) result)
+    ((hash-table-p result)
+     (let ((content (gethash "content" result)))
+       (if (and content (plusp (length content)))
+           (or (gethash "text" (elt (coerce content 'vector) 0)) "")
+           "")))
+    (t "")))
+
 (deftest mcp-server-call-tool
   (with-tmp-workspace
     (tool-write-note (mcp-protocol:json-object "text" "via mcp"))
@@ -56,7 +66,7 @@
                  server "list_dir" (mcp-protocol:json-object "path" "."))))
       (ok (find "list_dir" names :test #'string=))
       (ok (find "read_file" names :test #'string=))
-      (ok (search "notes.md" (princ-to-string out))))))
+      (ok (search "notes.md" (%mcp-text out))))))
 
 (deftest slash-commands
   (let ((s (make-chat-session :backend-kind :mock)))

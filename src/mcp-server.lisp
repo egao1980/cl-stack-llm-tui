@@ -59,13 +59,23 @@
 (defun tool-search-files (args)
   (let* ((obj (decode-args args))
          (pattern (or (%arg obj "pattern") "*"))
-         (root (resolve-in-workspace (or (%arg obj "path") "."))))
-    (let* ((hits (or (stack-pathlib:rglob root pattern) '()))
-           (n (min 50 (length hits))))
+         (root (resolve-in-workspace (or (%arg obj "path") ".")))
+         (hits '()))
+    (cond
+      ((stack-pathlib:directory-p root)
+       (dolist (triple (or (stack-pathlib:walk root) '()))
+         (destructuring-bind (dir files dirs) triple
+           (declare (ignore dir dirs))
+           (dolist (f files)
+             (when (stack-pathlib:match-p f pattern)
+               (push f hits))))))
+      ((stack-pathlib:match-p root pattern)
+       (push root hits)))
+    (let ((hits (nreverse hits)))
       (stack-json:encode
        (mapcar (lambda (p)
                  (stack-pathlib:as-posix (stack-pathlib:relative-to p (workspace-root))))
-               (subseq hits 0 n))))))
+               (subseq hits 0 (min 50 (length hits))))))))
 
 (defun %mcp-handler (fn)
   (lambda (args)
