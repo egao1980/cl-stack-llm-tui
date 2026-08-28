@@ -17,7 +17,8 @@
                "http-backend-async"
                "json-protocol"
                "json-backend-jzon"
-               "cl-stack-pathlib")
+               "cl-stack-pathlib"
+               "babel")
   :serial t
   :pathname "src"
   :components ((:file "package")

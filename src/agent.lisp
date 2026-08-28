@@ -3,7 +3,7 @@
 (defparameter *chat-instructions*
   "You are a local desk agent in a terminal. Be terse.
 Use tools when they help: now, calc, list_dir, read_file, write_note, search_files.
-Paths are relative to the workspace root. Do not invent file contents — read them.
+Paths are relative to the workspace root. Do not invent file contents -- read them.
 After tools, answer the user in a few sentences.")
 
 (defclass json-mcp-source (ai-agent-protocol/mcp:mcp-tool-source) ())

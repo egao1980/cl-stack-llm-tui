@@ -12,6 +12,10 @@
      (unwind-protect (progn ,@body)
        (uiop:delete-directory-tree dir :validate t :if-does-not-exist :ignore))))
 
+(deftest utf8-content-octets
+  (ok (equalp (babel:string-to-octets (string (code-char 8212)) :encoding :utf-8)
+              (cl-stack-llm-tui::%content-octets (string (code-char 8212))))))
+
 (deftest calc-ops
   (ok (= 5 (eval-calc "+" 2 3)))
   (ok (= 6 (eval-calc "*" "2" 3)))
