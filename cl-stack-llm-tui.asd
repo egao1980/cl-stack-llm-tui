@@ -4,7 +4,7 @@
   :author "egao1980"
   :license "MIT"
   :properties (:cl-repo (:ci (:with ("dissect"))))
-  :depends-on ("alexandria")
+  :depends-on ("alexandria"
                "llm-protocol"
                "llm-protocol-openai"
                "ai-agent-protocol"
