@@ -3,7 +3,8 @@
   :description "TUI agent chat over LM Studio or vllm.cpp, with tools + a stdio MCP server"
   :author "egao1980"
   :license "MIT"
-  :depends-on ("alexandria"
+  :properties (:cl-repo (:ci (:with ("dissect"))))
+  :depends-on ("alexandria")
                "llm-protocol"
                "llm-protocol-openai"
                "ai-agent-protocol"
@@ -43,7 +44,7 @@
   :components ((:file "vllm")))
 
 (defsystem "cl-stack-llm-tui/tests"
-  :depends-on ("cl-stack-llm-tui" "rove")
+  :depends-on ("cl-stack-llm-tui" "rove" "dissect")
   :pathname "tests"
   :serial t
   :components ((:file "package")
