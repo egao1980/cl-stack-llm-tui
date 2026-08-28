@@ -1,0 +1,10 @@
+*.fasl
+*.dx64fsl
+*.lx64fasl
+*.wx64fsl
+.qlot/
+.cl-repository/
+cl-repo.lock
+/tmp/
+*.log
+.DS_Store
