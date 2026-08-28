@@ -48,12 +48,15 @@ ros -l scripts/run-tests.lisp
 TTY → alt-screen TUI. Pipe / `LLM_TUI_LINE=1` → line mode.
 
 ```bash
-# LM Studio serving any chat model on 127.0.0.1:1234
+# copy workspace .env here, or: cp .env.example .env
+# Auth on: LM Studio → Developer → Manage Tokens (sk-lm-…). Dummy `lm-studio` is a condition.
 LLM_TUI_BACKEND=lmstudio ros -l scripts/tui.lisp
 
 # scripted backend
 LLM_TUI_BACKEND=mock LLM_TUI_LINE=1 ros -l scripts/tui.lisp
 ```
+
+Searches `.env` in `LLM_TUI_ENV`, cwd, `LLM_TUI_ROOT`, this checkout, then the parent workspace. 401 / dummy token → `lmstudio-auth-error` with `USE-VALUE`, `CONTINUE` (no Authorization), `LOAD-ENV`, `RETRY`.
 
 Slash commands: `/help` `/clear` `/backend mock|lmstudio|vllm` `/quit`.
 
@@ -97,7 +100,8 @@ Cursor / Claude Desktop:
 | `LLM_TUI_ROOT` | sandbox root for file tools + MCP |
 | `OPENAI_BASE_URL` / `LM_STUDIO_BASE_URL` | default `http://127.0.0.1:1234/v1` |
 | `OPENAI_MODEL` / `LM_STUDIO_MODEL` | default `local-model` |
-| `OPENAI_API_KEY` / `LM_API_TOKEN` | default `lm-studio` |
+| `OPENAI_API_KEY` / `LM_API_TOKEN` | only if LM Studio “Require authentication” is on (`sk-lm-…`; dummy `lm-studio` rejected) |
+| `LLM_TUI_ENV` | path to a `.env` (otherwise cwd / checkout / parent workspace) |
 | `VLLM_MODEL_PATH` | GGUF for `/vllm` |
 | `CL_REPOSITORY_CLIENT_DIR` | already-extracted client tree |
 

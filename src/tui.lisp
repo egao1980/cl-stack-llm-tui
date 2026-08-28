@@ -68,57 +68,63 @@
     (force-output *standard-output*)))
 
 (defun run-tui (&key (backend :lmstudio) session)
-  (let ((sess (or session (make-chat-session :backend-kind backend))))
-    (unwind-protect
-         (with-runtime
-           (loop
-             (%paint sess)
-             (format *query-io* "~&you> ")
-             (force-output *query-io*)
-             (let ((line (read-line *query-io* nil :eof)))
-               (when (or (eq line :eof) (null line))
-                 (return))
-               (multiple-value-bind (handled msg)
-                   (apply-slash-command sess line)
-                 (cond
-                   ((eq handled :quit)
-                    (return))
-                   (handled
-                    (setf (chat-session-turns sess)
-                          (append (chat-session-turns sess)
-                                  (list (list :assistant msg)))))
-                   ((plusp (length (string-trim '(#\Space #\Tab) line)))
-                    (handler-case (chat-turn sess line)
-                      (error (e)
-                        (setf (chat-session-turns sess)
-                              (append (chat-session-turns sess)
-                                      (list (list :assistant
-                                                  (format nil "error: ~a" e)))))))))))))
-      (%restore-tty))
-    sess))
+  (find-and-apply-dotenv)
+  (with-auto-load-env
+    (let ((sess (or session (make-chat-session :backend-kind backend))))
+      (unwind-protect
+           (with-runtime
+             (loop
+               (%paint sess)
+               (format *query-io* "~&you> ")
+               (force-output *query-io*)
+               (let ((line (read-line *query-io* nil :eof)))
+                 (when (or (eq line :eof) (null line))
+                   (return))
+                 (multiple-value-bind (handled msg)
+                     (apply-slash-command sess line)
+                   (cond
+                     ((eq handled :quit)
+                      (return))
+                     (handled
+                      (setf (chat-session-turns sess)
+                            (append (chat-session-turns sess)
+                                    (list (list :assistant msg)))))
+                     ((plusp (length (string-trim '(#\Space #\Tab) line)))
+                      (handler-case
+                          (with-auto-load-env
+                            (chat-turn sess line))
+                        (error (e)
+                          (setf (chat-session-turns sess)
+                                (append (chat-session-turns sess)
+                                        (list (list :assistant
+                                                    (format nil "error: ~a" e)))))))))))))
+        (%restore-tty))
+      sess)))
 
 (defun run-line-chat (&key (backend :mock) session)
   "No alt-screen — good for logs / tests / pipes."
-  (let ((sess (or session (make-chat-session :backend-kind backend))))
-    (with-runtime
-      (format t "~&cl-stack-llm-tui  backend=~a  /help to list commands~%"
-              (chat-session-backend-kind sess))
-      (loop
-        (format *query-io* "~&you> ")
-        (force-output *query-io*)
-        (let ((line (read-line *query-io* nil :eof)))
-          (when (or (eq line :eof) (null line))
-            (return))
-          (multiple-value-bind (handled msg)
-              (apply-slash-command sess line)
-            (cond
-              ((eq handled :quit) (return))
-              (handled (format t "~&desk> ~a~%" msg))
-              ((plusp (length (string-trim '(#\Space #\Tab) line)))
-               (handler-case
-                   (let ((run (chat-turn sess line)))
-                     (format t "~&desk> ~a~%"
-                             (or (ai-agent-protocol:agent-run-text run) "")))
-                 (error (e)
-                   (format t "~&desk> error: ~a~%" e)))))))))
-    sess))
+  (find-and-apply-dotenv)
+  (with-auto-load-env
+    (let ((sess (or session (make-chat-session :backend-kind backend))))
+      (with-runtime
+        (format t "~&cl-stack-llm-tui  backend=~a  /help to list commands~%"
+                (chat-session-backend-kind sess))
+        (loop
+          (format *query-io* "~&you> ")
+          (force-output *query-io*)
+          (let ((line (read-line *query-io* nil :eof)))
+            (when (or (eq line :eof) (null line))
+              (return))
+            (multiple-value-bind (handled msg)
+                (apply-slash-command sess line)
+              (cond
+                ((eq handled :quit) (return))
+                (handled (format t "~&desk> ~a~%" msg))
+                ((plusp (length (string-trim '(#\Space #\Tab) line)))
+                 (handler-case
+                     (let ((run (with-auto-load-env (chat-turn sess line))))
+                       (format t "~&desk> ~a~%"
+                               (or (ai-agent-protocol:agent-run-text run) "")))
+                   (error (e)
+                     (format t "~&desk> error: ~a~%" e))))))))
+      sess)))

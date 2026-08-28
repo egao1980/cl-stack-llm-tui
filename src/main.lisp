@@ -13,6 +13,7 @@
       run)))
 
 (defun main (&key backend line-mode)
+  (find-and-apply-dotenv)
   (let ((kind (or backend (%backend-from-env))))
     (if (or line-mode (not (%tty-p)) (%env "LLM_TUI_LINE"))
         (run-line-chat :backend kind)

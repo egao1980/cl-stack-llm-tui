@@ -8,3 +8,5 @@ cl-repo.lock
 /tmp/
 *.log
 .DS_Store
+.env
+.env.local

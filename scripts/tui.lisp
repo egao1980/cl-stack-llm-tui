@@ -8,18 +8,21 @@
 
 (load (merge-pathnames "bootstrap.lisp" *load-truename*))
 
-(setf *debugger-hook*
-      (lambda (c h)
-        (declare (ignore h))
-        (format *error-output* "~&TUI FAIL: ~A~%" c)
-        (uiop:print-backtrace :condition c :stream *error-output*)
-        (uiop:quit 1)))
-
 (let ((backend (string-downcase (or (uiop:getenv "LLM_TUI_BACKEND") "lmstudio"))))
   (when (string= backend "vllm")
     (load-tui-init-files :live t)
     (asdf:load-system "cl-stack-llm-tui/vllm"))
   (asdf:load-system "cl-stack-llm-tui"))
+
+(setf *debugger-hook*
+      (lambda (c h)
+        (declare (ignore h))
+        (when (find-restart 'cl-stack-llm-tui:load-env c)
+          (let ((*debugger-hook* nil))
+            (invoke-debugger c)))
+        (format *error-output* "~&TUI FAIL: ~A~%" c)
+        (uiop:print-backtrace :condition c :stream *error-output*)
+        (uiop:quit 1)))
 
 (cl-stack-llm-tui:main)
 (uiop:quit 0)

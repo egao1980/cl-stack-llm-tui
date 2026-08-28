@@ -40,7 +40,7 @@
 (defun make-lmstudio-backend (&key base-url api-key default-model)
   (llm-protocol-openai:make-openai-compat-backend
    :base-url (or base-url (%env "OPENAI_BASE_URL") (%env "LM_STUDIO_BASE_URL"))
-   :api-key (or api-key (%env "OPENAI_API_KEY") (%env "LM_API_TOKEN") "lm-studio")
+   :api-key (resolve-lmstudio-api-key api-key)
    :default-model (or default-model (%env "OPENAI_MODEL") (%env "LM_STUDIO_MODEL")
                       "local-model")
    :request-fn #'%http-utf8))

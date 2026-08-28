@@ -12,6 +12,82 @@
      (unwind-protect (progn ,@body)
        (uiop:delete-directory-tree dir :validate t :if-does-not-exist :ignore))))
 
+(defmacro with-env (bindings &body body)
+  (let ((saved (gensym "SAVED")))
+    `(let ((,saved (list ,@(loop for (k) in bindings
+                                 collect `(cons ,k (uiop:getenv ,k))))))
+       (unwind-protect
+            (progn
+              ,@(loop for (k v) in bindings
+                      collect `(setf (uiop:getenv ,k) (or ,v "")))
+              ,@body)
+         (dolist (pair ,saved)
+           (setf (uiop:getenv (car pair)) (or (cdr pair) "")))))))
+
+(deftest nonempty-api-key
+  (ok (null (cl-stack-llm-tui::%nonempty-key nil)))
+  (ok (null (cl-stack-llm-tui::%nonempty-key "")))
+  (ok (equal "tok" (cl-stack-llm-tui::%nonempty-key "tok")))
+  (ok (cl-stack-llm-tui::%dummy-lmstudio-token-p "lm-studio"))
+  (ok (null (cl-stack-llm-tui::%dummy-lmstudio-token-p "sk-lm-x"))))
+
+(deftest parse-dotenv-alist
+  (let ((pairs (parse-dotenv (format nil "LM_API_TOKEN=sk-lm-x~%# c~%export OPENAI_MODEL=\"foo\"~%"))))
+    (ok (equal "sk-lm-x" (cdr (assoc "LM_API_TOKEN" pairs :test #'string=))))
+    (ok (equal "foo" (cdr (assoc "OPENAI_MODEL" pairs :test #'string=))))))
+
+(deftest lmstudio-skips-dummy-if-real-token
+  (with-env (("OPENAI_API_KEY" "lm-studio") ("LM_API_TOKEN" "sk-lm-real"))
+    (ok (equal "sk-lm-real" (resolve-lmstudio-api-key)))))
+
+(deftest lmstudio-auth-dummy-signals
+  (ok (signals
+       (cl-stack-llm-tui::%restart-lmstudio-auth
+        :token "lm-studio"
+        :message "Malformed LM Studio API token: lm-studio")
+       'lmstudio-auth-error)))
+
+(deftest lmstudio-auth-use-value
+  (with-env (("OPENAI_API_KEY" "lm-studio") ("LM_API_TOKEN" ""))
+    (let ((got (handler-bind ((lmstudio-auth-error
+                               (lambda (c) (use-value "sk-lm-test" c))))
+                 (with-lmstudio-restarts
+                   (resolve-lmstudio-api-key)))))
+      (ok (equal "sk-lm-test" got)))))
+
+(deftest lmstudio-auth-continue
+  (with-env (("OPENAI_API_KEY" "lm-studio") ("LM_API_TOKEN" ""))
+    (let ((got (handler-bind ((lmstudio-auth-error
+                               (lambda (c) (continue c))))
+                 (with-lmstudio-restarts
+                   (resolve-lmstudio-api-key)))))
+      (ok (null got)))))
+
+(deftest lmstudio-auth-load-env
+  (let ((f (merge-pathnames (format nil "llm-tui-env-~a.env" (random 100000000))
+                            (uiop:temporary-directory))))
+    (unwind-protect
+         (with-env (("OPENAI_API_KEY" "lm-studio")
+                    ("LM_API_TOKEN" "")
+                    ("LLM_TUI_ENV" (namestring f)))
+           (with-open-file (s f :direction :output :if-exists :supersede)
+             (write-string "LM_API_TOKEN=sk-lm-fromfile" s))
+           (let ((got (handler-bind ((lmstudio-auth-error #'auto-load-env))
+                        (with-lmstudio-restarts
+                          (resolve-lmstudio-api-key)))))
+             (ok (equal "sk-lm-fromfile" got))))
+      (when (probe-file f) (delete-file f)))))
+
+(deftest lmstudio-auth-from-http-401
+  (ok (signals
+       (cl-stack-llm-tui::%maybe-lmstudio-401
+        (make-condition 'llm-protocol:llm-http-error
+                        :status 401
+                        :message "Malformed LM Studio API token provided: lm-studio."))
+       'lmstudio-auth-error))
+  (ok (null (cl-stack-llm-tui::%maybe-lmstudio-401
+             (make-condition 'llm-protocol:llm-http-error :status 500 :message "boom")))))
+
 (deftest utf8-content-octets
   (ok (equalp (babel:string-to-octets (string (code-char 8212)) :encoding :utf-8)
               (cl-stack-llm-tui::%content-octets (string (code-char 8212))))))

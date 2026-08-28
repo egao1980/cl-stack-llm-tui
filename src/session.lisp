@@ -49,30 +49,42 @@
      (setf (chat-session-status session) "ready"))
     (t nil)))
 
+(defun %maybe-lmstudio-401 (condition)
+  (when (and (typep condition 'llm-protocol:llm-http-error)
+             (eql (llm-protocol:llm-http-error-status condition) 401))
+    (%restart-lmstudio-auth
+     :token (and *lmstudio-backend*
+                 (ignore-errors (llm-protocol-openai:openai-api-key *lmstudio-backend*)))
+     :cause condition
+     :message (princ-to-string condition))))
+
 (defun chat-turn (session text &key (max-steps 8) (max-tokens 256))
   (setf (chat-session-turns session)
         (append (chat-session-turns session)
                 (list (list :user text))))
   (setf (chat-session-status session) "thinking")
-  (let ((run (ai-agent-protocol:run-ai-agent
-              (chat-session-agent session) text
-              :settings (ai-agent-protocol:make-agent-settings
-                         :llm (llm-protocol:make-llm-settings
-                               :temperature 0.2 :max-tokens max-tokens)
-                         :max-steps max-steps)
-              :on-event (lambda (kind payload)
-                          (%on-event session kind payload)))))
-    (let ((reply (or (ai-agent-protocol:agent-run-text run) "")))
-      (setf (chat-session-last-tools session)
-            (mapcar #'ai-agent-protocol:agent-invocation-name
-                    (ai-agent-protocol:agent-run-invocations run)))
-      (setf (chat-session-turns session)
-            (append (chat-session-turns session)
-                    (list (list :assistant reply
-                                :tools (chat-session-last-tools session)
-                                :finish (ai-agent-protocol:agent-run-finish-reason run)))))
-      (setf (chat-session-status session) "ready")
-      run)))
+  (let ((*lmstudio-backend* (chat-session-backend session)))
+    (with-lmstudio-restarts
+      (handler-bind ((llm-protocol:llm-http-error #'%maybe-lmstudio-401))
+        (let ((run (ai-agent-protocol:run-ai-agent
+                    (chat-session-agent session) text
+                    :settings (ai-agent-protocol:make-agent-settings
+                               :llm (llm-protocol:make-llm-settings
+                                     :temperature 0.2 :max-tokens max-tokens)
+                               :max-steps max-steps)
+                    :on-event (lambda (kind payload)
+                                (%on-event session kind payload)))))
+          (let ((reply (or (ai-agent-protocol:agent-run-text run) "")))
+            (setf (chat-session-last-tools session)
+                  (mapcar #'ai-agent-protocol:agent-invocation-name
+                          (ai-agent-protocol:agent-run-invocations run)))
+            (setf (chat-session-turns session)
+                  (append (chat-session-turns session)
+                          (list (list :assistant reply
+                                      :tools (chat-session-last-tools session)
+                                      :finish (ai-agent-protocol:agent-run-finish-reason run)))))
+            (setf (chat-session-status session) "ready")
+            run))))))
 
 (defun apply-slash-command (session line)
   "Returns (values handled-p message). handled-p T means do not send to the LLM."
@@ -92,17 +104,19 @@
        (unless arg
          (return-from apply-slash-command
            (values t (format nil "backend is ~a" (chat-session-backend-kind session)))))
-       (handler-case
-           (let ((next (make-chat-session :backend-kind arg)))
-             (setf (chat-session-backend-kind session) (chat-session-backend-kind next)
-                   (chat-session-backend session) (chat-session-backend next)
-                   (chat-session-agent session) (chat-session-agent next)
-                   (chat-session-mcp-server session) (chat-session-mcp-server next)
-                   (chat-session-model session) (chat-session-model next)
-                   (chat-session-last-tools session) '())
-             (values t (format nil "backend → ~a (~a)"
-                               (chat-session-backend-kind session)
-                               (chat-session-model session))))
-         (error (e)
-           (values t (format nil "cannot switch backend: ~a" e)))))
+       (handler-bind
+           ((error (lambda (c)
+                     (unless (typep c 'lmstudio-auth-error)
+                       (return-from apply-slash-command
+                         (values t (format nil "cannot switch backend: ~a" c)))))))
+         (let ((next (make-chat-session :backend-kind arg)))
+           (setf (chat-session-backend-kind session) (chat-session-backend-kind next)
+                 (chat-session-backend session) (chat-session-backend next)
+                 (chat-session-agent session) (chat-session-agent next)
+                 (chat-session-mcp-server session) (chat-session-mcp-server next)
+                 (chat-session-model session) (chat-session-model next)
+                 (chat-session-last-tools session) '())
+           (values t (format nil "backend → ~a (~a)"
+                             (chat-session-backend-kind session)
+                             (chat-session-model session))))))
       (t (values nil nil)))))

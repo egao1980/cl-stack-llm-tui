@@ -5,6 +5,20 @@
    #:tui-error
    #:tui-error-message
    #:sandbox-error
+   #:lmstudio-auth-error
+   #:lmstudio-auth-error-token
+   #:lmstudio-auth-error-cause
+   #:with-lmstudio-restarts
+   #:with-auto-load-env
+   #:auto-load-env
+   #:invoke-retry
+   #:invoke-load-env
+   #:load-env
+   #:resolve-lmstudio-api-key
+   #:parse-dotenv
+   #:apply-dotenv
+   #:find-dotenv
+   #:find-and-apply-dotenv
    #:*workspace-root*
    #:workspace-root
    #:resolve-in-workspace
