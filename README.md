@@ -13,7 +13,7 @@ you ──► agent "desk"
 backend:  LM Studio :1234/v1   or   vllm.cpp GGUF (optional system)
 ```
 
-`cl-stack-llm-tui` does **not** depend on `vllm-cpp`. Live GGUF path is `cl-stack-llm-tui/vllm`.
+`cl-stack-llm-tui` does **not** depend on `vllm-cpp`. Live GGUF path is `cl-stack-llm-tui/vllm` (`llm-backend-vllm-cpp`).
 
 Clone this repo only. Deps from [`ghcr.io/egao1980/cl-systems`](https://github.com/egao1980/cl-stack-systems) via [`cl-repository-client`](https://github.com/egao1980/cl-repository). No sibling checkouts.
 

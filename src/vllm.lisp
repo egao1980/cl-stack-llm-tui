@@ -8,7 +8,7 @@
                    :model-path path
                    :device (or device (vllm-cpp:default-device))
                    :max-model-len max-model-len)))
-      (llm-protocol-vllm-cpp:make-vllm-cpp-backend
+      (llm-backend-vllm-cpp:make-vllm-cpp-backend)
        :model-path path
        :device (vllm-cpp:engine-device engine)
        :engine engine))))
